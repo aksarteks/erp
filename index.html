@@ -2287,6 +2287,9 @@ const lk = (c,t,en) => [normColour(c||"").toLowerCase(),tN(t),enN(en)].join("|")
 const lineName = l => [l.c||"(rangsiz)", l.t, l.en ? "eni "+enN(l.en) : ""].filter(Boolean).join(" · ");
 const sofOf = F => { const fn = String(F.fnet??"").trim()!=="" ? numIn(F.fnet) : numIn(F.net); const sal = String(F.sal??"").trim()!=="" ? numIn(F.sal) : numIn(F.rul)*0.1; return Math.round((fn - sal - numIn(F.vz))*100)/100 };
 const isoSerial = n => new Date(Date.UTC(1899,11,30)+Math.round(n)*864e5).toISOString().slice(0,10);
+// mato nomi yozilmasa asosiy mato deb olinadi
+const DEF_T = "30/1 KARDE SUPREM";
+const tDef = t => String(t||"").trim() || DEF_T;
 const trT = s => (window.__T ? window.__T(s) : s);
 const numIn = v => { const n=Number(String(v??"").replace(",",".").replace(/\s/g,"")); return isFinite(n)?n:0 };
 
@@ -2485,7 +2488,7 @@ function vMove(main){
 }
 async function saveMove(o, kind, cur){
   const F=MS.f; if (MS.busy) return; MS.busy=true;
-  const it = cur ? {c:cur.c, t:cur.t, en:cur.en} : {c:normColour(F.c), t:(F.t||"").trim(), en:String(F.en||"").trim().replace(",",".")};
+  const it = cur ? {c:cur.c, t:tDef(cur.t), en:cur.en} : {c:normColour(F.c), t:tDef(F.t), en:String(F.en||"").trim().replace(",",".")};
   it.kg=Math.round(numIn(F.kg)*100)/100;
   if (kind==="kirim"){ if (numIn(F.brut)) it.brut=numIn(F.brut); if (numIn(F.narx)){ it.narx=numIn(F.narx); it.sum=Math.round(it.narx*it.kg*100)/100 } }
   if (numIn(F.rul)) it.rul=Math.round(numIn(F.rul));
@@ -2529,7 +2532,7 @@ function kirimGrid(main, o, lines, widths){
     if (!c){ toast("Rang nomini yozing.",true); return }
     const items=[];
     for (const r of rows){ const q=Math.round(numIn(G.q[r.k])*100)/100; if (!(q>0)) continue;
-      const it = r.x ? {c:r.x.c, t:r.x.t, en:r.x.en} : {c, t:(r.e.t||"").trim(), en:String(r.e.en||"").trim().replace(",",".")};
+      const it = r.x ? {c:r.x.c, t:tDef(r.x.t), en:r.x.en} : {c, t:tDef(r.e.t), en:String(r.e.en||"").trim().replace(",",".")};
       it.kg=q; const rl=Math.round(numIn(G.r[r.k])); if (rl) it.rul=rl; if (numIn(G.narx)){ it.narx=numIn(G.narx); it.sum=Math.round(it.narx*q*100)/100 } items.push(it) }
     if (!items.length){ toast("Kamida bitta eniga og'irlik yozing.",true); return }
     const doc={stage:"mato_in", date:G.date||todayISO(), items, src:(G.src||"").trim(), by:S.me||null, at:new Date().toISOString(), label:"Mato keldi: "+c};
@@ -2610,11 +2613,11 @@ function vOmbor(main){
   if (!rows.length){ main.append(h("div",{class:"panel"},h("div",{class:"empty"},"Omborda mato yo'q."))); return }
   const tb=h("tbody");
   for (const {o,x} of rows) tb.append(h("tr",{class:"click",onclick:()=>{ MS.order=o.id; MS.sub="chiqim"; MS.line=lk(x.c,x.t,x.en); MS.f={}; render() }},
-    o.id===QID ? h("td",{},h("span",{class:"pill"},"Qoldiq mato")) : h("td",{class:"mono"},o.code), h("td",{},x.c), h("td",{class:"muted"},x.t), h("td",{class:"mono"},x.en), h("td",{class:"n"},kg(x.kerak)), h("td",{class:"n"},kg(x.keldi)), h("td",{class:"n"},kg(x.berildi)), h("td",{class:"n",style:"font-weight:700"},kg(x.ombor)),
+    o.id===QID ? h("td",{},h("span",{class:"pill"},"Qoldiq mato")) : h("td",{class:"mono"},o.code), h("td",{},x.c), h("td",{class:"muted"},tDef(x.t)), h("td",{class:"mono"},x.en), h("td",{class:"n"},kg(x.kerak)), h("td",{class:"n"},kg(x.keldi)), h("td",{class:"n"},kg(x.berildi)), h("td",{class:"n",style:"font-weight:700"},kg(x.ombor)),
     h("td",{class:"n "+(x.kerak&&x.sof<x.kerak?"bad":"")}, x.kerak ? (x.sof<x.kerak ? kg(x.kerak-x.sof)+" kam" : x.sof>x.kerak ? "+"+kg(x.sof-x.kerak) : "✓") : "")));
   main.append(h("div",{class:"tbox"}, h("table",{}, h("thead",{},h("tr",{}, ["Zakaz","Rang","Mato turi","Eni"].map(x=>h("th",{},x)), ["Kerak","Kelgan","Bichuvga","Omborda","Zakazga"].map(x=>h("th",{class:"n"},x)))), tb,
     h("tfoot",{},h("tr",{class:"tot"}, h("td",{colspan:"4"},"Jami"), h("td",{class:"n"},kg(T.kerak)), h("td",{class:"n"},kg(T.keldi)), h("td",{class:"n"},kg(T.berildi)), h("td",{class:"n"},kg(T.ombor)), h("td")))))),
-  main.append(h("div",{class:"row"}, h("span",{class:"spacer"}), h("button",{class:"btn quiet",type:"button",onclick:()=>offer(`Mato_ombor_${todayISO()}.xlsx`, xlsx("Mato ombori",["Zakaz","Rang","Mato turi","Eni","Kerak, kg","Kelgan, kg","Bichuvga, kg","Omborda, kg"], rows.map(({o,x})=>[o.code,x.c,x.t,x.en,r1(x.kerak),r1(x.keldi),r1(x.berildi),r1(x.ombor)]),[14,18,16,10,11,11,11,11]))},"Excel")));
+  main.append(h("div",{class:"row"}, h("span",{class:"spacer"}), h("button",{class:"btn quiet",type:"button",onclick:()=>offer(`Mato_ombor_${todayISO()}.xlsx`, xlsx("Mato ombori",["Zakaz","Rang","Mato turi","Eni","Kerak, kg","Kelgan, kg","Bichuvga, kg","Omborda, kg"], rows.map(({o,x})=>[o.id===QID?"Qoldiq mato":o.code,x.c,tDef(x.t),x.en,r1(x.kerak),r1(x.keldi),r1(x.berildi),r1(x.ombor)]),[14,18,16,10,11,11,11,11]))},"Excel")));
 }
 const r1 = v => Math.round((Number(v)||0)*10)/10;
 // ehtiyojdan kam kelgan mato: zakaz · rang · mato · eni bo'yicha
@@ -2637,10 +2640,10 @@ function vKamomad(main){
     [...byO].sort((a,b)=>b[1]-a[1]).map(([c,v])=>h("button",{class:"chip",type:"button",onclick:()=>{ MS.q=c; render() }}, c, " ", h("small",{}, kg(v)+" kg")))))));
   const tb=h("tbody");
   for (const {o,x,d} of rows) tb.append(h("tr",{class:"click",onclick:()=>{ MS.order=o.id; MS.sub="ehtiyoj"; pref.set("mt_sub","ehtiyoj"); MS.ed=null; render(); window.scrollTo(0,0) }},
-    h("td",{class:"mono"},o.code), h("td",{},x.c), h("td",{class:"muted"},x.t), h("td",{class:"mono"},x.en), h("td",{class:"n"},kg(x.kerak)), h("td",{class:"n"},kg(x.sof)),
+    h("td",{class:"mono"},o.code), h("td",{},x.c), h("td",{class:"muted"},tDef(x.t)), h("td",{class:"mono"},x.en), h("td",{class:"n"},kg(x.kerak)), h("td",{class:"n"},kg(x.sof)),
     h("td",{class:"n "+(d<0?"bad":"warn"),style:"font-weight:700"}, (d<0?"−":"+")+kg(Math.abs(d))), h("td",{class:"n muted"}, Math.round(Math.abs(d)/x.kerak*100)+"%")));
   main.append(h("div",{class:"tbox"}, h("table",{}, h("thead",{},h("tr",{}, ["Zakaz","Rang","Mato turi","Eni"].map(x=>h("th",{},x)), ["Kerak, kg","Kelgan, kg","Farq, kg","%"].map(x=>h("th",{class:"n"},x)))), tb)));
-  main.append(h("div",{class:"row"}, h("span",{class:"spacer"}), h("button",{class:"btn quiet",type:"button",onclick:()=>offer(`Mato_kamomad_${todayISO()}.xlsx`, xlsx("Kamomad",["Zakaz","Rang","Mato turi","Eni","Kerak, kg","Kelgan sof, kg","Farq, kg"], rows.map(({o,x,d})=>[o.code,x.c,x.t,x.en,r1(x.kerak),r1(x.sof),r1(d)]),[14,18,20,9,11,12,11]))},"Excel")));
+  main.append(h("div",{class:"row"}, h("span",{class:"spacer"}), h("button",{class:"btn quiet",type:"button",onclick:()=>offer(`Mato_kamomad_${todayISO()}.xlsx`, xlsx("Kamomad",["Zakaz","Rang","Mato turi","Eni","Kerak, kg","Kelgan sof, kg","Farq, kg"], rows.map(({o,x,d})=>[o.code,x.c,tDef(x.t),x.en,r1(x.kerak),r1(x.sof),r1(d)]),[14,18,20,9,11,12,11]))},"Excel")));
 }
 function brakRows(tur){ const rows=[]; for (const {o,moves} of MS.all) for (const m of moves) if (m.stage==="mato_brak" && (m.tur||"tamir")===tur){ const it=(m.items||[])[0]||{}; if (qok([o.code,it.c,it.t,it.en,m.boy,m.why].join(" "))) rows.push({o,m,it}) } return rows.sort((a,b)=>(b.m.date||"").localeCompare(a.m.date||"")) }
 function vSort4(main){
@@ -2654,7 +2657,7 @@ function vSort4(main){
   const tb=h("tbody");
   for (const {o,m,it} of rows) tb.append(h("tr",{}, h("td",{class:"mono muted"},m.date||""), h("td",{class:"mono"},o.code), h("td",{},lineName(it)), h("td",{class:"n"},kg(it.kg)), h("td",{class:"n"},it.rul||""), h("td",{},m.from==="ombor"?"omborda topildi":"bichuvdan qaytdi"), h("td",{style:"white-space:normal;min-width:200px"},m.why||"")));
   main.append(h("div",{class:"tbox"}, h("table",{}, h("thead",{},h("tr",{}, ["Sana","Zakaz","Rang · eni"].map(x=>h("th",{},x)), h("th",{class:"n"},"kg"), h("th",{class:"n"},"Rulon"), h("th",{},"Qayerda topildi"), h("th",{},"Muammosi"))), tb)));
-  main.append(h("div",{class:"row"}, h("span",{class:"spacer"}), h("button",{class:"btn quiet",type:"button",onclick:()=>offer(`Mato_4sort_${todayISO()}.xlsx`, xlsx("4-sort",["Sana","Zakaz","Rang","Mato turi","Eni","kg","Rulon","Qayerda topildi","Muammosi"], rows.map(({o,m,it})=>[m.date||"",o.code,it.c,it.t||"",it.en||"",r1(it.kg),numIn(it.rul)||"",m.from==="ombor"?"omborda topildi":"bichuvdan qaytdi",m.why||""]),[11,14,16,14,9,9,8,16,40]))},"Excel")));
+  main.append(h("div",{class:"row"}, h("span",{class:"spacer"}), h("button",{class:"btn quiet",type:"button",onclick:()=>offer(`Mato_4sort_${todayISO()}.xlsx`, xlsx("4-sort",["Sana","Zakaz","Rang","Mato turi","Eni","kg","Rulon","Qayerda topildi","Muammosi"], rows.map(({o,m,it})=>[m.date||"",o.code,it.c,tDef(it.t),it.en||"",r1(it.kg),numIn(it.rul)||"",m.from==="ombor"?"omborda topildi":"bichuvdan qaytdi",m.why||""]),[11,14,16,14,9,9,8,16,40]))},"Excel")));
 }
 function vTamir(main){
   main.append(h("p",{class:"muted",style:"margin:0"},"Ta'mirga ketgan mato. Ta'mirdan qaytgani \"Mato kirimi\"da yangi mato sifatida kiritiladi (\"Ta'mirdan qaytgan mato\" belgisi bilan), bu yerda esa \"Qaytdi\" deb belgilanadi."));
@@ -2732,7 +2735,7 @@ function vQoldiq(main){
 }
 async function saveQoldiq(){
   const Q=MS.q0; const items=[]; const bad=[];
-  Q.rows.forEach((r,i)=>{ const q=numIn(r.kg); if (!q && !r.c.trim() && !r.en.trim()) return; if (!q || !r.c.trim()) bad.push(i+1); else { const it={c:normColour(r.c.trim()), t:r.t.trim(), en:String(r.en).trim().replace(",","."), kg:Math.round(q*100)/100}; const ru=Math.round(numIn(r.rul)); if (ru>0) it.rul=ru; items.push(it) } });
+  Q.rows.forEach((r,i)=>{ const q=numIn(r.kg); if (!q && !r.c.trim() && !r.en.trim()) return; if (!q || !r.c.trim()) bad.push(i+1); else { const it={c:normColour(r.c.trim()), t:tDef(r.t), en:String(r.en).trim().replace(",","."), kg:Math.round(q*100)/100}; const ru=Math.round(numIn(r.rul)); if (ru>0) it.rul=ru; items.push(it) } });
   if (bad.length){ toast(`${bad.join(", ")}-qatorda rang yoki kg yozilmagan`,true); return }
   if (!items.length){ toast("Kamida bitta qatorga rang va kg yozing",true); return }
   MS.saving=true; render();
@@ -2786,13 +2789,13 @@ function vKeldi(main){
     h("tbody",{}, [...byB].sort((a,b)=>b[1].kg-a[1].kg).map(([b,x])=>h("tr",{class:"click",onclick:()=>{ K.boy=b==="—"?"":b; render() }}, h("td",{},h("b",{},b)), num(x.n), h("td",{class:"n"},kg(x.kg)), h("td",{class:"n"},money(x.sum)))))))));
   if (!rows.length){ main.append(h("div",{class:"panel"},h("div",{class:"empty"},"Tanlangan davrda kelgan mato yo'q."))); return }
   const tb=h("tbody");
-  for (const {o,m,it} of rows.slice(0,MS.kAll?99999:400)) tb.append(h("tr",{}, h("td",{class:"mono muted"},m.date||""), h("td",{},it.t||""), h("td",{class:"mono"},o.code), h("td",{},m.part||""), h("td",{},m.src||""), h("td",{},it.c), h("td",{class:"mono"},enN(it.en)),
+  for (const {o,m,it} of rows.slice(0,MS.kAll?99999:400)) tb.append(h("tr",{}, h("td",{class:"mono muted"},m.date||""), h("td",{},tDef(it.t)), h("td",{class:"mono"},o.code), h("td",{},m.part||""), h("td",{},m.src||""), h("td",{},it.c), h("td",{class:"mono"},enN(it.en)),
     h("td",{class:"n"},it.rul||""), h("td",{class:"n"},it.brut?kg(it.brut):""), h("td",{class:"n"},it.net?kg(it.net):""), h("td",{class:"n"},kg(it.fnet??it.net??it.kg)), h("td",{class:"n"},it.sal?kg(it.sal):""), h("td",{class:"n"},it.vz?kg(it.vz):""),
     h("td",{class:"n",style:"font-weight:700"},kg(it.kg)), h("td",{class:"n"},it.narx||""), h("td",{class:"n"},it.sum?money(it.sum):"")));
   main.append(h("div",{class:"tbox"}, h("table",{}, h("thead",{},h("tr",{}, ["Sana","Mato nomi","Zakaz","Partiya","Bo'yoqxona","Rang","Eni"].map(x=>h("th",{},x)), ["Rulon","Brutto","Netto","Fabrika netto","Salafan","Brak (vozvrat)","Sof mato","Narxi","Summa"].map(x=>h("th",{class:"n"},x)))), tb,
     h("tfoot",{},h("tr",{class:"tot"}, h("td",{colspan:"7"},"Jami"), num(S2.rul), h("td",{class:"n"},kg(S2.brut)), h("td",{class:"n"},kg(S2.net)), h("td",{class:"n"},kg(S2.fnet)), h("td",{class:"n"},kg(S2.sal)), h("td",{class:"n"},kg(S2.vz)), h("td",{class:"n"},kg(S2.kg)), h("td"), h("td",{class:"n"},money(S2.sum)))))));
   main.append(h("div",{class:"row"}, rows.length>400 && !MS.kAll ? h("button",{class:"btn quiet small",type:"button",onclick:()=>{ MS.kAll=true; render() }},`Hammasini ko'rsatish (${rows.length})`) : "", h("span",{class:"spacer"}),
-    h("button",{class:"btn primary",type:"button",onclick:()=>{ const body=rows.map(({o,m,it})=>[m.date||"",it.t||"",o.code,m.part||"",m.src||"",it.c,enN(it.en),numIn(it.rul)||"",r2(it.brut),r2(it.net),r2(it.fnet??it.net??it.kg),r2(it.sal),r2(it.vz),r2(it.kg),numIn(it.narx)||"",r2(it.sum)]);
+    h("button",{class:"btn primary",type:"button",onclick:()=>{ const body=rows.map(({o,m,it})=>[m.date||"",tDef(it.t),o.code,m.part||"",m.src||"",it.c,enN(it.en),numIn(it.rul)||"",r2(it.brut),r2(it.net),r2(it.fnet??it.net??it.kg),r2(it.sal),r2(it.vz),r2(it.kg),numIn(it.narx)||"",r2(it.sum)]);
       const T_=["Jami","","","","","","",S2.rul,r2(S2.brut),r2(S2.net),r2(S2.fnet),r2(S2.sal),r2(S2.vz),r2(S2.kg),"",r2(S2.sum)]; T_._b=1; body.push(T_);
       offer(`Kelgan_mato_${K.boy||"hammasi"}_${K.d1||""}_${K.d2||todayISO()}.xlsx`.replace(/[^\w.-]+/g,"_"), xlsx("Kelgan mato",["Sana","Mato nomi","Zakaz Kodi","Partiya","Bo'yoqxona","Rangi","Eni","Top Soni","Brut kg","Net kg","Fabrika Net","Salafan Karton","Brag(Vozvrat) KG","Sof mato kg","Narxi","Summa"],body,[11,22,13,9,12,16,7,8,9,9,10,9,10,10,7,11])) }},"Excel (bo'yoqxona uchun)")));
 }
@@ -2961,12 +2964,12 @@ function ehtiyojView(main, o){
     h("div",{class:"ph"}, h("h2",{},"Mato ehtiyoji"), h("span",{class:"muted"}, o.code), h("span",{class:"pill ok"},"Saqlangan"), h("span",{class:"spacer"}), h("b",{class:"mono"},kg(total)), h("span",{},"kg")),
     h("div",{class:"pb"},
       h("div",{class:"tbox"}, h("table",{},
-        h("thead",{},h("tr",{}, h("th",{},"Rang"), ...cols.map(([,x])=>h("th",{class:"n",title:x.t||""}, h("span",{style:"display:block;font-size:10px;opacity:.75;text-transform:none;letter-spacing:0;max-width:110px;margin-left:auto;white-space:normal"}, x.t||""), x.en ? enN(x.en) : "—")), h("th",{class:"n"},"Jami, kg"))),
+        h("thead",{},h("tr",{}, h("th",{},"Rang"), ...cols.map(([,x])=>h("th",{class:"n",title:x.t||""}, h("span",{style:"display:block;font-size:10px;opacity:.75;text-transform:none;letter-spacing:0;max-width:110px;margin-left:auto;white-space:normal"}, tDef(x.t)), x.en ? enN(x.en) : "—")), h("th",{class:"n"},"Jami, kg"))),
         tb, h("tfoot",{},foot))),
       B && h("p",{class:"muted",style:"margin:0;font-size:13px"},"Katak ostidagi kichik son: kelgan sof mato bilan ehtiyoj farqi (− kam, + ortiq). ✓ — teng."),
       h("div",{class:"row"}, h("span",{class:"spacer"}),
-        h("button",{class:"btn quiet",type:"button",onclick:()=>offer(`Mato_ehtiyoji_${o.code}.xlsx`, xlsx("Mato ehtiyoji",["Rang","Mato turi","Eni","Kerak, kg","Kelgan, kg"], L.map(l=>[l.c,l.t||"",l.en||"",r1(l.kg), B ? r1((findLine(B.list,l.c,l.t,l.en)||{}).sof||0) : ""]),[18,14,10,11,11]))},"Excel"),
-        h("button",{class:"btn quiet",type:"button",onclick:()=>{ MS.ed={id:o.id, rows:L.map(l=>({c:l.c||"",t:l.t||"",en:l.en||"",kg:String(l.kg??"")}))}; render() }},"Tahrirlash"),
+        h("button",{class:"btn quiet",type:"button",onclick:()=>offer(`Mato_ehtiyoji_${o.code}.xlsx`, xlsx("Mato ehtiyoji",["Rang","Mato turi","Eni","Kerak, kg","Kelgan, kg"], L.map(l=>[l.c,tDef(l.t),l.en||"",r1(l.kg), B ? r1((findLine(B.list,l.c,l.t,l.en)||{}).sof||0) : ""]),[18,14,10,11,11]))},"Excel"),
+        h("button",{class:"btn quiet",type:"button",onclick:()=>{ MS.ed={id:o.id, rows:L.map(l=>({c:l.c||"",t:tDef(l.t),en:l.en||"",kg:String(l.kg??"")}))}; render() }},"Tahrirlash"),
         h("button",{class:"btn primary",type:"button",onclick:()=>{ MS.sub="kirim"; pref.set("mt_sub","kirim"); MS.line=""; MS.col=null; MS.f={}; render(); window.scrollTo(0,0) }},"Mato kirimiga o'tish")))));
 }
 function vEhtiyoj(main){
@@ -2974,13 +2977,13 @@ function vEhtiyoj(main){
   const o=orderChips(main);
   if (!o) return;
   if ((o.mato||[]).length && !(MS.ed && MS.ed.id===o.id)){ ehtiyojView(main,o); return }
-  if (!MS.ed || MS.ed.id!==o.id) MS.ed={id:o.id, rows:(o.mato||[]).map(l=>({c:l.c||"",t:l.t||"",en:l.en||"",kg:String(l.kg??"")}))};
+  if (!MS.ed || MS.ed.id!==o.id) MS.ed={id:o.id, rows:(o.mato||[]).map(l=>({c:l.c||"",t:tDef(l.t),en:l.en||"",kg:String(l.kg??"")}))};
   const ED=MS.ed;
   const tot=()=>ED.rows.reduce((s,r)=>s+numIn(r.kg),0);
   const tb=h("tbody");
   ED.rows.forEach((r,i)=>tb.append(h("tr",{},
     h("td",{},h("input",{id:"me_c"+i,value:r.c,style:"width:160px",list:"me_cl",oninput:e=>{r.c=e.target.value}})),
-    h("td",{},h("input",{id:"me_t"+i,value:r.t,style:"width:130px",placeholder:"Supreme",oninput:e=>{r.t=e.target.value}})),
+    h("td",{},h("input",{id:"me_t"+i,value:r.t,style:"width:170px",placeholder:DEF_T,oninput:e=>{r.t=e.target.value}})),
     h("td",{},h("input",{id:"me_en"+i,value:r.en,style:"width:90px",placeholder:"1.76",oninput:e=>{r.en=e.target.value}})),
     h("td",{class:"n"},h("input",{id:"me_kg"+i,type:"text",inputmode:"decimal",value:r.kg,style:"width:100px;text-align:right;font-family:var(--mono)",oninput:e=>{ e.target.value=e.target.value.replace(/[^\d.,]/g,""); r.kg=e.target.value; const t=$("me_tot"); if (t) t.textContent=kg(tot()) }})),
     h("td",{},h("button",{class:"btn danger small",type:"button",onclick:()=>{ ED.rows.splice(i,1); render() }},"×")))));
@@ -3011,7 +3014,7 @@ function vEhtiyoj(main){
         h("button",{class:"btn primary",type:"button",onclick:async()=>{
           const mato=[]; const seen=new Map();
           for (const r of ED.rows){ const c=normColour(r.c), q=numIn(r.kg); if (!c && !q) continue; if (!c){ toast("Har bir qatorga rang yozing.",true); return }
-            const l={c, t:(r.t||"").trim(), en:String(r.en||"").trim().replace(",","."), kg:Math.round(q*100)/100}; const k=lk(l.c,l.t,l.en); if (seen.has(k)) seen.get(k).kg+=l.kg; else { seen.set(k,l); mato.push(l) } }
+            const l={c, t:tDef(r.t), en:String(r.en||"").trim().replace(",","."), kg:Math.round(q*100)/100}; const k=lk(l.c,l.t,l.en); if (seen.has(k)) seen.get(k).kg+=l.kg; else { seen.set(k,l); mato.push(l) } }
           try{ await S.db.doc(`orders/${o.id}`).update({mato}); o.mato=mato; MS.ed=null; toast(`Mato ehtiyoji saqlandi: ${kg(mato.reduce((s,l)=>s+l.kg,0))} kg`); render() }catch(e){ toast(dbErr(e),true) } }},"Saqlash")))));
 }
 
@@ -3134,7 +3137,7 @@ function parseMatoPage(words){
     const rib = /рибан|рибон|ribana|ribona/i.test(L.text) || (!Object.keys(vals).length && /lik|лик/i.test(fab));
     if (!fab && !colour && boy==null) continue;
     if (rib){ const c = last ? last.c : colour; if (boy) out.push({c, cOcr:colour, t:"Ribana", en:"", kg:boy, name:fab}); continue }
-    const t = /супрем|suprem|cynpem|cyпрем/i.test(fab) ? "Supreme" : fab;
+    const t = /супрем|suprem|cynpem|cyпрем/i.test(fab) || !fab.trim() ? "30/1 KARDE SUPREM" : fab;
     last={c:colour}; const sum=Object.values(vals).reduce((a,b)=>a+b,0);
     if (boy!=null && Math.abs(sum-boy)>0.15) warn.push(`${colour}: enlar yig'indisi ${Math.round(sum*10)/10} kg, PDF'dagi "Bo'yalgan" ${boy} kg`);
     for (const [en,kg] of Object.entries(vals)) if (kg>0) out.push({c:colour, t, en, kg:Math.round(kg*10)/10, name:fab});
