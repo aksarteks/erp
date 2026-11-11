@@ -1838,7 +1838,7 @@ function drawBadge(w){
   const code=badgeCode(w.id); drawBarcode(x, code, 0, 88, cv.width, 110); x.font="500 20px Arial, sans-serif"; x.textAlign="center"; x.fillText(code, cv.width/2, 204);
   return cv;
 }
-async function printCanvases(list){
+async function printCanvases(list, wmm, hmm){ const LW=wmm||50, LH=hmm||30;
   if (!list.length) return;
   let area=document.getElementById("printArea"); if (area) area.remove();
   area=document.createElement("div"); area.id="printArea";
@@ -2313,30 +2313,32 @@ function brandOf(o){
   return br || null;
 }
 // termoprinter uchun: hamma yozuv qalin, keyin rasm faqat qora-oq qilinadi (kulrang chekkalar xira chiqmasin)
+// 60x40 mm (8 nuqta/mm = 480x320)
+const PW=60, PH=40, PPX=8;
 function drawPassport(o, m){
-  const it=(m.items||[])[0]||{}; const cv=document.createElement("canvas"); cv.width=400; cv.height=240; const x=cv.getContext("2d");
-  x.fillStyle="#fff"; x.fillRect(0,0,400,240); x.fillStyle="#000"; x.textBaseline="top"; const L=10, R=390, W=R-L;
-  const F=(px)=>`bold ${px}px Arial, Helvetica, sans-serif`;
-  x.font=F(30); const no="№"+m.no; const nw=x.measureText(no).width;
-  x.fillText(fit(x,o.code,W-nw-12,F(30)), L, 6); x.textAlign="right"; x.fillText(no, R, 6); x.textAlign="left";
+  const it=(m.items||[])[0]||{}; const CW=PW*PPX, CH=PH*PPX; const cv=document.createElement("canvas"); cv.width=CW; cv.height=CH; const x=cv.getContext("2d");
+  x.fillStyle="#fff"; x.fillRect(0,0,CW,CH); x.fillStyle="#000"; x.textBaseline="top"; const L=12, R=CW-12, W=R-L;
+  const F=(px)=>`bold ${px}px Arial, Helvetica, sans-serif`, N=(px)=>`normal ${px}px Arial, Helvetica, sans-serif`;
+  x.font=F(36); const no="№"+m.no; const nw=x.measureText(no).width;
+  x.fillText(fit(x,o.code,W-nw-14,F(36)), L, 8); x.font=F(36); x.textAlign="right"; x.fillText(no, R, 8); x.textAlign="left";
   const br=brandOf(o); const bn=br ? br.name : (o.brand||"");
+  if (bn) x.fillText(fit(x, bn, W, F(28)), L, 54);
   const prod=[o.product||(br&&br.product), it.m||(o.models||[])[0]].filter(Boolean).join(" · ");
-  x.font=F(23); const bw=bn ? x.measureText(bn).width : 0; if (bn) x.fillText(bn, L, 42);
-  if (prod) x.fillText(fit(x, (bn?"· ":"")+prod, W-bw-8, "normal 20px Arial, sans-serif"), L+bw+(bn?8:0), 45);
-  x.font=F(42); const sz=[it.s, it.r].filter(Boolean).join(" "); const sw=x.measureText(sz).width; x.fillText(sz, R-sw, 72);
-  x.fillText(fit(x, it.c, W-sw-14, F(32)), L, 78);
-  x.fillRect(L,120,W,4);
-  x.fillText(fit(x, "Partiya: "+(m.partiya||"—"), W, F(25)), L, 131);
-  x.fillText(fit(x, "Nastil: "+(m.nastil||"—"), W, F(25)), L, 162);
-  x.font=F(34); x.fillText(sumQ(m)+" dona", L, 196);
-  x.font="normal 21px Arial, sans-serif"; x.textAlign="right"; x.fillText(m.date||"", R, 206); x.textAlign="left";
-  // qora-oq
-  const im=x.getImageData(0,0,400,240), d=im.data;
+  if (prod) x.fillText(fit(x, prod, W, N(23)), L, 90);
+  x.font=F(52); const sz=[it.s, it.r].filter(Boolean).join(" "); const sw=x.measureText(sz).width; x.fillText(sz, R-sw, 120);
+  x.fillText(fit(x, it.c, W-sw-16, F(38)), L, 128);
+  x.fillRect(L,180,W,4);
+  x.fillText(fit(x, "Partiya: "+(m.partiya||"—"), W, F(30)), L, 194);
+  x.fillText(fit(x, "Nastil: "+(m.nastil||"—"), W, F(30)), L, 232);
+  x.font=F(40); x.fillText(sumQ(m)+" dona", L, 272);
+  x.font=N(24); x.textAlign="right"; x.fillText(m.date||"", R, 284); x.textAlign="left";
+  // qora-oq (termoprinter kulrangni xira chiqaradi)
+  const im=x.getImageData(0,0,CW,CH), d=im.data;
   for (let i=0;i<d.length;i+=4){ const v=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)<140?0:255; d[i]=d[i+1]=d[i+2]=v; d[i+3]=255 }
   x.putImageData(im,0,0);
   return cv;
 }
-async function printPassport(o, list){ if (!SITE.tkPrint){ toast("Stiker chiqarish moduli topilmadi",true); return } await SITE.tkPrint(list.map(m=>drawPassport(o,m))) }
+async function printPassport(o, list){ if (!SITE.tkPrint){ toast("Stiker chiqarish moduli topilmadi",true); return } await SITE.tkPrint(list.map(m=>drawPassport(o,m)), PW, PH) }
 
 /* ---------- PACHKA QILISH ---------- */
 function vPachka(main){
