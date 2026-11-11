@@ -1844,7 +1844,7 @@ async function printCanvases(list){
   area=document.createElement("div"); area.id="printArea";
   let css=document.getElementById("printCss"); if (!css){ css=document.createElement("style"); css.id="printCss"; document.head.append(css) }
   css.textContent=`#printArea{display:none} @media print{ @page{size:${LW}mm ${LH}mm;margin:0} html,body{margin:0!important;padding:0!important;background:#fff!important}
-    body>*:not(#printArea){display:none!important} #printArea{display:block!important} #printArea img{display:block;width:${LW}mm;height:${LH}mm;page-break-after:always;break-after:page} #printArea img:last-child{page-break-after:auto;break-after:auto} }`;
+    body>*:not(#printArea){display:none!important} #printArea{display:block!important} #printArea img{display:block;width:${LW}mm;height:${LH}mm;image-rendering:pixelated;image-rendering:crisp-edges;-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-after:always;break-after:page} #printArea img:last-child{page-break-after:auto;break-after:auto} }`;
   const loads=[];
   for (const cv of list){ const img=new Image(); loads.push(new Promise(r=>{ img.onload=r; img.onerror=r })); img.src=cv.toDataURL("image/png"); area.append(img) }
   document.body.append(area); await Promise.all(loads);
@@ -2307,21 +2307,33 @@ function orderPicker(main, key, title){
 
 /* ---------- 50x30 pasport stiker ---------- */
 function fit(x,t,maxW,font){ x.font=font; t=String(t||""); if (x.measureText(t).width<=maxW) return t; while (t.length>1 && x.measureText(t+"…").width>maxW) t=t.slice(0,-1); return t+"…" }
+function brandOf(o){
+  const B=SET().brands||[];
+  const br=B.find(b=>b.id===o.brand||b.name===o.brand) || B.find(b=>b.letter && String(o.code||"").toUpperCase().slice(3,4)===String(b.letter).toUpperCase());
+  return br || null;
+}
+// termoprinter uchun: hamma yozuv qalin, keyin rasm faqat qora-oq qilinadi (kulrang chekkalar xira chiqmasin)
 function drawPassport(o, m){
   const it=(m.items||[])[0]||{}; const cv=document.createElement("canvas"); cv.width=400; cv.height=240; const x=cv.getContext("2d");
-  x.fillStyle="#fff"; x.fillRect(0,0,400,240); x.fillStyle="#000"; x.textBaseline="top"; const L=12, W=400-24;
-  x.font="700 28px Arial, sans-serif"; x.fillText(fit(x,o.code,250,"700 28px Arial, sans-serif"), L, 8);
-  x.textAlign="right"; x.fillText("№"+m.no, 400-L, 8); x.textAlign="left";
-  const br=(SET().brands||[]).find(b=>b.id===o.brand||b.name===o.brand); const prod=[o.product||(br&&br.product), it.m||(o.models||[])[0]].filter(Boolean).join(" · ");
-  x.fillText(fit(x,prod,W,"500 20px Arial, sans-serif"), L, 44);
-  x.font="700 38px Arial, sans-serif"; const sz=[it.s, it.r].filter(Boolean).join(" "); const sw=x.measureText(sz).width; x.fillText(sz, 400-L-sw, 72);
-  x.fillText(fit(x, it.c, W-sw-14, "700 30px Arial, sans-serif"), L, 78);
-  x.fillRect(L,122,W,2);
-  x.font="600 22px Arial, sans-serif";
-  x.fillText(fit(x, "Partiya: "+(m.partiya||"—"), W, "600 22px Arial, sans-serif"), L, 134);
-  x.fillText(fit(x, "Nastil: "+(m.nastil||"—"), W, "600 22px Arial, sans-serif"), L, 164);
-  x.font="700 30px Arial, sans-serif"; const qt=sumQ(m)+" dona"; x.fillText(qt, L, 198);
-  x.font="500 18px Arial, sans-serif"; x.textAlign="right"; x.fillText(m.date||"", 400-L, 206); x.textAlign="left";
+  x.fillStyle="#fff"; x.fillRect(0,0,400,240); x.fillStyle="#000"; x.textBaseline="top"; const L=10, R=390, W=R-L;
+  const F=(px)=>`800 ${px}px Arial, "Arial Black", sans-serif`;
+  x.font=F(30); const no="№"+m.no; const nw=x.measureText(no).width;
+  x.fillText(fit(x,o.code,W-nw-12,F(30)), L, 6); x.textAlign="right"; x.fillText(no, R, 6); x.textAlign="left";
+  const br=brandOf(o); const bn=br ? br.name : (o.brand||"");
+  const prod=[o.product||(br&&br.product), it.m||(o.models||[])[0]].filter(Boolean).join(" · ");
+  x.font=F(24); const bw=bn ? x.measureText(bn).width : 0; if (bn) x.fillText(bn, L, 42);
+  if (prod) x.fillText(fit(x, (bn?"· ":"")+prod, W-bw-8, "700 20px Arial, sans-serif"), L+bw+(bn?8:0), 45);
+  x.font=F(42); const sz=[it.s, it.r].filter(Boolean).join(" "); const sw=x.measureText(sz).width; x.fillText(sz, R-sw, 72);
+  x.fillText(fit(x, it.c, W-sw-14, F(32)), L, 78);
+  x.fillRect(L,120,W,4);
+  x.fillText(fit(x, "Partiya: "+(m.partiya||"—"), W, F(25)), L, 131);
+  x.fillText(fit(x, "Nastil: "+(m.nastil||"—"), W, F(25)), L, 162);
+  x.font=F(34); x.fillText(sumQ(m)+" dona", L, 196);
+  x.font=F(22); x.textAlign="right"; x.fillText(m.date||"", R, 206); x.textAlign="left";
+  // qora-oq
+  const im=x.getImageData(0,0,400,240), d=im.data;
+  for (let i=0;i<d.length;i+=4){ const v=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)<175?0:255; d[i]=d[i+1]=d[i+2]=v; d[i+3]=255 }
+  x.putImageData(im,0,0);
   return cv;
 }
 async function printPassport(o, list){ if (!SITE.tkPrint){ toast("Stiker chiqarish moduli topilmadi",true); return } await SITE.tkPrint(list.map(m=>drawPassport(o,m))) }
