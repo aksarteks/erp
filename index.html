@@ -2319,15 +2319,15 @@ function brandOf(o){
 const PW=60, PH=40, PPX=8;
 function drawPassport(o, m){
   const it=(m.items||[])[0]||{}; const CW=PW*PPX, CH=PH*PPX; const cv=document.createElement("canvas"); cv.width=CW; cv.height=CH; const x=cv.getContext("2d");
-  x.fillStyle="#fff"; x.fillRect(0,0,CW,CH); x.fillStyle="#000"; x.textBaseline="top"; const L=12, R=CW-12, W=R-L;
+  x.fillStyle="#fff"; x.fillRect(0,0,CW,CH); x.fillStyle="#000"; x.textBaseline="top"; const L=3*PPX, R=CW-6*PPX, W=R-L; // xavfsiz chegara: chapdan 3 mm, o'ngdan 6 mm (printer chetini kesmasin)
   const F=(px)=>`bold ${px}px Arial, Helvetica, sans-serif`, N=(px)=>`normal ${px}px Arial, Helvetica, sans-serif`;
-  x.font=F(36); const no="№"+m.no; const nw=x.measureText(no).width;
-  x.fillText(fit(x,o.code,W-nw-14,F(36)), L, 8); x.font=F(36); x.textAlign="right"; x.fillText(no, R, 8); x.textAlign="left";
+  x.font=F(32); const no="№"+m.no; const nw=x.measureText(no).width;
+  x.fillText(fit(x,o.code,W-nw-14,F(32)), L, 10); x.font=F(32); x.textAlign="right"; x.fillText(no, R, 10); x.textAlign="left";
   const br=brandOf(o); const bn=br ? br.name : (o.brand||"");
   if (bn) x.fillText(fit(x, bn, W, F(28)), L, 54);
   const prod=[o.product||(br&&br.product), it.m||(o.models||[])[0]].filter(Boolean).join(" · ");
   if (prod) x.fillText(fit(x, prod, W, N(23)), L, 90);
-  x.font=F(52); const sz=[it.s, it.r].filter(Boolean).join(" "); const sw=x.measureText(sz).width; x.fillText(sz, R-sw, 120);
+  x.font=F(46); const sz=[it.s, it.r].filter(Boolean).join(" "); const sw=x.measureText(sz).width; x.fillText(sz, R-sw, 120);
   x.fillText(fit(x, it.c, W-sw-16, F(38)), L, 128);
   x.fillRect(L,180,W,4);
   x.fillText(fit(x, "Partiya: "+(m.partiya||"—"), W, F(30)), L, 194);
