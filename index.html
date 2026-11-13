@@ -2609,7 +2609,7 @@ function vMove(main){
   // step 1: colour, step 2: fabric type / width of that colour
   const cols=[...new Set(lines.map(x=>x.c))];
   if (MS.line && MS.line!=="__new"){ const cur0=lines.find(x=>lk(x.c,x.t,x.en)===MS.line); if (cur0) MS.col=cur0.c }
-  if (MS.col!=null && !cols.includes(MS.col)) MS.col=null;
+  if (MS.col!=null && MS.col!=="__new" && !cols.includes(MS.col)) MS.col=null;
   if (MS.col==null && cols.length===1) MS.col=cols[0];
   const sum = xs => xs.reduce((a,x)=>({kerak:a.kerak+x.kerak, sof:a.sof+x.sof, ombor:a.ombor+x.ombor, bichuv:a.bichuv+x.bichuv, keldi:a.keldi+x.keldi, berildi:a.berildi+x.berildi}),{kerak:0,sof:0,ombor:0,bichuv:0,keldi:0,berildi:0});
   const chip = (x, label, on, click) => h("button",{class:"chip szchip",style:"text-align:left;min-width:120px",type:"button","aria-pressed":String(on),onclick:click},
@@ -2618,7 +2618,7 @@ function vMove(main){
   main.append(h("section",{class:"panel"}, h("div",{class:"ph"},h("h2",{},"2. Rang")), h("div",{class:"pb"},
     cols.length ? h("div",{class:"chips"}, cols.map(c=>chip(sum(lines.filter(x=>x.c===c)), c||"(rangsiz)", MS.col===c, ()=>{ MS.col=c; MS.line=""; MS.f={}; MS.g=null; const ws=lines.filter(x=>x.c===c); if (kind!=="kirim" && ws.length===1){ MS.line=lk(ws[0].c,ws[0].t,ws[0].en); setTimeout(()=>{ const el=$("mt_kg"); el&&el.focus() },0) } render() })))
       : h("div",{class:"empty"}, kind==="kirim" ? "Bu zakazga mato ehtiyoji kiritilmagan. \"Zakaz ehtiyoji\" bo'limida kiriting yoki pastdan yangi qator qo'shing." : "Bu zakazga hali mato kelmagan."),
-    kind==="kirim" && h("div",{}, h("button",{class:"btn quiet small",type:"button",onclick:()=>{ MS.line=""; MS.col="__new"; MS.g=null; MS.f={}; render() }},"+ Boshqa rang")))));
+    kind==="kirim" && h("div",{}, h("button",{class:"btn quiet small",type:"button","aria-pressed":String(MS.col==="__new"),onclick:()=>{ MS.line=""; MS.col="__new"; MS.g=null; MS.f={}; render(); setTimeout(()=>{ const el=$("mg_c"); el&&el.focus() },0) }},"+ Boshqa rang")))));
   if (kind==="kirim"){ if (MS.col!=null) kirimGrid(main,o,lines,MS.col==="__new"?[]:widths); history(main,o,moves); return }
   if (widths.length) main.append(h("section",{class:"panel"}, h("div",{class:"ph"},h("h2",{},"3. Mato turi va eni"), h("span",{class:"muted"},MS.col)), h("div",{class:"pb"},
     h("div",{class:"chips"}, widths.map(x=>{ const k=lk(x.c,x.t,x.en); return chip(x, [x.t, x.en?"eni "+enN(x.en):""].filter(Boolean).join(" · ")||"—", MS.line===k, ()=>{ MS.line=k; MS.f={}; render(); setTimeout(()=>{ const el=$("mt_kg"); el&&el.focus() },0) }) })))));
@@ -2718,6 +2718,7 @@ async function saveMove(o, kind, cur){
 function kirimGrid(main, o, lines, widths){
   const isNew = MS.col==="__new";
   const G = MS.g ||= { c:"", date:"", src:"", part:"", rep:false, note:"", narx:"", extra:[], q:{}, r:{} };
+  if (isNew && !widths.length && !G.extra.length) G.extra.push({t:"",en:""});
   const miss = k => !!G.check && !String(G[k]||"").trim();
   const rows=[...widths.map(x=>({k:lk(x.c,x.t,x.en), x})), ...G.extra.map((e,i)=>({k:"__x"+i, e, i}))];
   const hintOf=(x,q)=>{ if (!x || !x.kerak) return ""; const d=x.sof+q-x.kerak; return Math.abs(d)<0.05 ? "zakazga to'liq" : d<0 ? kg(-d)+" kg kam" : "+"+kg(d)+" kg ortiq" };
